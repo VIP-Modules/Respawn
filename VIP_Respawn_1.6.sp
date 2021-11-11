@@ -83,7 +83,7 @@ new Handle:g_hState_Transition;
 new Handle:g_hPlayerRespawn;
 #endif
 
-int g_iCounter;
+new g_iRoundStartTime;
 
 public OnPluginStart()
 {
@@ -274,8 +274,6 @@ public Action:Respawn_CMD(iClient, args)
 	return Plugin_Handled;
 }
 
-new g_iRoundStartTime;
-
 public Event_RoundStart(Handle:hEvent, const String:name[], bool:dontBroadcast)
 {
 	#if LIMIT_MODE == 1
@@ -289,7 +287,7 @@ public Event_RoundStart(Handle:hEvent, const String:name[], bool:dontBroadcast)
 		KillTimer(g_hTimer);
 		g_hTimer = INVALID_HANDLE;
 	}
-/*
+
 	if(g_fStartDuration)
 	{
 		g_bEnabledRespawn = false;
@@ -298,7 +296,7 @@ public Event_RoundStart(Handle:hEvent, const String:name[], bool:dontBroadcast)
 
 		return;
 	}
-*/
+
 	g_bEnabledRespawn = true;
 
 	if (g_fEndDuration)
@@ -383,16 +381,12 @@ public Event_PlayerDeath(Handle:hEvent, const String:name[], bool:dontBroadcast)
 	g_fDeathTime[iClient] = GetGameTime();
 	
 	#if USE_AUTORESPAWN
-	PrintToChat(iClient, "AutoRespawn: %d", ++g_iCounter);
-	LogMessage("AutoRespawn: %d (%N, %d)", g_iCounter, iClient, iClient);
-	LogMessage("g_bAutoRespawn: %d", g_bAutoRespawn[iClient]);
 	if(g_bAutoRespawn[iClient])
 	{
-		// LogMessage("IsAllowedTimeAfterRoundStart: %d", IsAllowedTimeAfterRoundStart(iClient));
-		// if (!IsAllowedTimeAfterRoundStart(iClient))
-		// {
-		// 	return;
-		// }
+		if (!IsAllowedTimeAfterRoundStart(iClient))
+		{
+			return;
+		}
 
 		CreateTimer(1.1, Timer_RespawnClient, GetClientUserId(iClient), TIMER_FLAG_NO_MAPCHANGE);
 	}
@@ -472,16 +466,12 @@ RespawnClient(iClient, bool:bCheck = true)
 
 bool:CheckRespawn(iClient, bool:bNotify)
 {
-	LogMessage("CheckRespawn: %N, %d", iClient, iClient);
-
-	LogMessage("g_bEnabled: %d", g_bEnabled);
 	if(!g_bEnabled)
 	{
 		VIP_PrintToChatClient(iClient, "%t", "RESPAWN_OFF");
 		return false;
 	}
 
-	LogMessage("g_iMapLimit: %d", g_iMapLimit);
 	if(g_iMapLimit == 0)
 	{
 		if(bNotify)
@@ -491,7 +481,6 @@ bool:CheckRespawn(iClient, bool:bNotify)
 		return false;
 	}
 
-	LogMessage("g_bEnabledRespawn: %d", g_bEnabledRespawn);
 	if(!g_bEnabledRespawn)
 	{
 		if(bNotify)
@@ -504,7 +493,6 @@ bool:CheckRespawn(iClient, bool:bNotify)
 	#if defined GAME_CS
 	if(GetEngineVersion() == Engine_CSGO && GameRules_GetProp("m_bWarmupPeriod") == 1) 
     {
-		LogMessage("m_bWarmupPeriod: %d", GameRules_GetProp("m_bWarmupPeriod"));
 		if(bNotify)
 		{
 			VIP_PrintToChatClient(iClient, "%t", "RESPAWN_FORBIDDEN_ON_WARMUP");
@@ -515,12 +503,10 @@ bool:CheckRespawn(iClient, bool:bNotify)
 
 	if(GetGameTime() < g_fDeathTime[iClient] + 1.0)
 	{
-		LogMessage("g_fDeathTime: %f", GetGameTime() - g_fDeathTime[iClient] + 1.0);
 		return false;
 	}
 
 	new iClientTeam = GetClientTeam(iClient);
-	LogMessage("iClientTeam: %d", iClientTeam);
 	if(iClientTeam < 2)
 	{
 		if(bNotify)
@@ -530,7 +516,6 @@ bool:CheckRespawn(iClient, bool:bNotify)
 		return false;
 	}
 
-	LogMessage("iClientTeam: %d", iClientTeam);
 	if(IsPlayerAlive(iClient))
 	{
 		if(bNotify)
@@ -540,7 +525,6 @@ bool:CheckRespawn(iClient, bool:bNotify)
 		return false;
 	}
 
-	LogMessage("IsAllowedTimeAfterRoundStart: %d", IsAllowedTimeAfterRoundStart(iClient));
 	if (!IsAllowedTimeAfterRoundStart(iClient))
 	{
 		if(bNotify)
@@ -557,8 +541,6 @@ bool:CheckRespawn(iClient, bool:bNotify)
 		iLimit = g_iMapLimit;
 	}
 
-	LogMessage("iLimit: %d", iLimit);
-	LogMessage("g_iClientRespawns: %d", g_iClientRespawns[iClient]);
 	if(iLimit != -1 && g_iClientRespawns[iClient] >= iLimit)
 	{
 		if(bNotify)
@@ -572,7 +554,6 @@ bool:CheckRespawn(iClient, bool:bNotify)
 		return false;
 	}
 
-	// PrintToChat(iClient, "g_iMinAlive = %d", g_iMinAlive);
 	if(g_iMinAlive)
 	{
 		decl iPlayers[2], i, iTeam;
@@ -584,9 +565,6 @@ bool:CheckRespawn(iClient, bool:bNotify)
 				++iPlayers[iTeam-2];
 			}
 		}
-		// PrintToChat(iClient, "MIN_ALIVE_MODE = %d", MIN_ALIVE_MODE);
-		// PrintToChat(iClient, "iPlayers[0] = %d", iPlayers[0]);
-		// PrintToChat(iClient, "iPlayers[1] = %d", iPlayers[1]);
 
 		#if MIN_ALIVE_MODE == 0			//	Живых в команде игрока
 		if(iPlayers[iClientTeam == 2 ? 0:1] < g_iMinAlive)
@@ -598,7 +576,6 @@ bool:CheckRespawn(iClient, bool:bNotify)
 		if(iPlayers[0] < g_iMinAlive || iPlayers[1] < g_iMinAlive)
 		#endif
 		{
-			LogMessage("g_iMinAlive: %d", g_iMinAlive);
 			if(bNotify)
 			{
 				VIP_PrintToChatClient(iClient, "%t", "NOT_ENOUGH_ALIVE_PLAYERS");
