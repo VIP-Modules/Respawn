@@ -427,7 +427,7 @@ RespawnClient(iClient, bool:bCheck = true)
 	#elseif defined GAME_TF2
 	TF2_RespawnPlayer(iClient);
 	#elseif defined GAME_L4D
-	if(iTeam == 2)
+	if(GetClientTeam(iClient) == 2)
 	{
 		SDKCall(g_hRoundRespawn, iClient);
 
@@ -438,7 +438,7 @@ RespawnClient(iClient, bool:bCheck = true)
 		TeleportEntity(iClient, g_fDeathPos[iClient], NULL_VECTOR, NULL_VECTOR);
 	}
 	#elseif defined GAME_L4D2
-	switch(iTeam)
+	switch(GetClientTeam(iClient))
 	{
 		case 2:
 		{
